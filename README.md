@@ -41,6 +41,17 @@ JSON 使用 `schema: osuneu.annotations`、`version: 2`（v1 仍可导入，缺�
 因此「无位移三连」可以同时写成 `labels: ["stream"]` + `spacing: "stack"`，
 而「检查过但没有跳/串」写 `labels: []` + `checked: true`——这两条语义完全不同，训练时不能混。
 
+导出时还会自动补三个**派生字段**（不用手工填）：
+
+| 字段 | 含义 |
+|---|---|
+| `spacingAuto` | 由区间内物件的实际间距算出：`stack`（几乎无位移）/ `tight`（重叠）/ `spaced`（不重叠）。与手填的 `spacing` 并存，手填优先 |
+| `stats.objectCount` / `medianDtMs` / `medianDistPx` | 区间内的物件数、相邻时间差中位数、位移中位数 |
+| `stats.beatMs` / `snap` | 区间起点的拍长与 `medianDt / beat`（1/4 = 0.25，1/8 = 0.125） |
+
+这三样直接来自谱面几何，训练端不用再自己算；`snap` 和 `objectCount` 组合起来就能区分
+「三连 / burst / 长串」，不必依赖标签本身。
+
 预览支持圆圈、Bezier / 圆弧 / Catmull / 直线滑条、重复滑条、转盘和 AR / CS；滑条时长考虑 SV 与红线重置。它是标注预览，不是完整游戏引擎：尚未实现 stacking、皮肤、storyboard、视频、击打音效或官方 autoplay 光标。演示为无音频的合成谱面。音乐依赖浏览器支持的音频格式。
 
 下拉框（难度 / 播放速度 / MOD / 间距 / 确信度）是页面内的自定义列表，不是系统 `<select>` 弹窗。
