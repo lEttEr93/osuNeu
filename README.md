@@ -5,22 +5,25 @@
 双击 Windows 下的 `annotate.cmd`，或在仓库目录运行：
 
 ```powershell
-.venv\Scripts\python.exe -m osuneu.annotator
+.venv\Scripts\python.exe -m osuneu.desktop
 ```
 
-浏览器会打开 `http://127.0.0.1:8765`。标注器仅使用 Python 标准库，不需要加载模型、GPU 或安装网页依赖。
+默认打开独立的 Qt 桌面窗口，不使用浏览器配置、扩展或鼠标手势。首次安装桌面依赖：`uv sync --extra desktop`。标注器不加载模型。原来的浏览器入口仍可通过 `python -m osuneu.annotator` 使用。
 
 - 打开或拖入 `.osu` / `.osz`；谱包内可选择 standard 难度，并自动加载对应音乐。单独的 `.osu` 可手动添加音频。
-- 时间轴拖动定位；Shift + 拖动框选；拖动 I / O 边界修改选区。滚轮缩放，Shift + 滚轮或下方滚动条平移。
+- 时间轴左键单击定位、按住拖动实时预览；按住右键拖动框选，支持反向框选，不需要 Shift。左键拖动 I / O 边界修改选区。
+- 按住鼠标中键拖动时间轴或下方滚动条平移；滚轮围绕鼠标位置缩放。下方滚动条仍支持左键操作。
 - I / O 将当前时间设为起点 / 终点，也可直接输入 `分:秒.毫秒` 或秒数。时间边界不吸附物件。
 - 支持变速、循环选区、多标签、自定义标签、备注、编辑与删除。空格播放，左右键微调 100ms，Shift + 左右键微调 1s。
-- 标注按谱面 SHA-256 自动保存在当前浏览器；导出 JSON 用于持久备份和后续训练。导入时核对谱面哈希，同 ID 标注更新，不同 ID 合并。
+- 标注按谱面 SHA-256 自动保存在桌面应用的独立 profile；导出 JSON 会弹出系统保存对话框。导入时核对谱面哈希，同 ID 标注更新，不同 ID 合并。旧浏览器标注可导出后导入桌面版。
+
+桌面持久数据使用 `OSUNEU_DATA_DIR` 或 `--data-dir` 指定；默认复用 `artifacts/osuneu/*-desktop-studio` 中最新的目录，没有时通过工作区脚本创建。可删除的磁盘缓存使用 `AI_CACHES/osuneu`，不会使用浏览器用户目录。默认桌面服务端口为 8766，窗口关闭时服务随之退出。
 
 JSON 使用 `schema: osuneu.annotations`、`version: 1`，区间为 `startMs` / `endMs`，标签为独立的 `labels` 数组。导出同时附带区间内物件起点对应的 **0 起始** `objectIndices`，原始毫秒边界保留。未标注区间代表未知，不能直接视为负样本。标注器暂不接入模型预测。
 
 预览支持圆圈、Bezier / 圆弧 / Catmull / 直线滑条、重复滑条、转盘和 AR / CS；滑条时长考虑 SV 与红线重置。它是标注预览，不是完整游戏引擎：尚未实现 stacking、皮肤、storyboard、视频、击打音效或官方 autoplay 光标。演示为无音频的合成谱面。音乐依赖浏览器支持的音频格式。
 
-检查：`python -m unittest discover -s tests`。更换端口：`python -m osuneu.annotator --port 8766`。
+检查：`python -m unittest discover -s tests`。更换桌面端口：`python -m osuneu.desktop --port 8767`。桌面交互测试见 `tests/desktop-ui.cjs`。
 
 ---
 

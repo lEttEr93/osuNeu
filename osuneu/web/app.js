@@ -1,4 +1,5 @@
 const $ = id => document.getElementById(id);
+if(new URLSearchParams(location.search).has('desktop')){document.documentElement.dataset.desktop='true';$('saveStatus').textContent='自动保存在桌面应用';}
 const state = {maps:[], map:null, time:0, playing:false, rate:1, start:0, end:0, view:0, span:10000, annotations:[], tags:new Set(), editing:null};
 let audioURL=null, lastFrame=performance.now(), drag=null;
 const colors=['#c4f277','#ff8fbd','#80caff','#cab0ff','#ffcc80','#7fdfcf'];
@@ -9,7 +10,7 @@ const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
 const duration=()=>state.map?.duration||10000;
 function status(text){$('status').textContent=text;}
 function storageKey(){return `osuneu.annotations.v1.${state.map.id}`;}
-function persist(){try{localStorage.setItem(storageKey(),JSON.stringify({durationMs:duration(),annotations:state.annotations}));$('saveStatus').textContent='已自动保存在当前浏览器';}catch{$('saveStatus').textContent='自动保存失败，请导出 JSON';}}
+function persist(){try{localStorage.setItem(storageKey(),JSON.stringify({durationMs:duration(),annotations:state.annotations}));$('saveStatus').textContent=document.documentElement.dataset.desktop?'已自动保存在桌面应用':'已自动保存在当前浏览器';}catch{$('saveStatus').textContent='自动保存失败，请导出 JSON';}}
 function seek(ms){state.time=clamp(ms,0,duration());const a=$('audio');if(a.src&&Number.isFinite(a.duration))a.currentTime=Math.min(state.time/1000,a.duration);updateTime();}
 function updateTime(){$('time').value=fmt(state.time);$('total').textContent=`/ ${fmt(duration())}`;}
 function pause(){state.playing=false;$('audio').pause();$('play').textContent='▶ 播放';}
@@ -41,10 +42,55 @@ function drawTimeline(){const [c,w,h]=canvasContext($('timeline'));const x=t=>(t
     state.annotations.forEach((a,i)=>{if(a.endMs<state.view||a.startMs>state.view+state.span)return;const lane=i%3;c.fillStyle=colors[i%colors.length]+'55';c.fillRect(x(a.startMs),82+lane*24,Math.max(2,x(a.endMs)-x(a.startMs)),21);c.save();c.beginPath();c.rect(x(a.startMs),82+lane*24,Math.max(2,x(a.endMs)-x(a.startMs)),21);c.clip();c.fillStyle='#eff4ff';c.fillText(a.labels.join(' + '),x(a.startMs)+5,87+lane*24);c.restore();});if(state.end>state.start){c.fillStyle='#c4f27716';c.fillRect(x(state.start),27,x(state.end)-x(state.start),h-27);}for(const [t,label] of [[state.start,'I'],[state.end,'O']]){const px=x(t);c.strokeStyle='#c4f277';c.lineWidth=1.5;c.beginPath();c.moveTo(px,27);c.lineTo(px,h);c.stroke();c.fillStyle='#c4f277';c.fillText(label,px+4,h-15);}const px=x(state.time);c.strokeStyle='#ff8fbd';c.lineWidth=2;c.beginPath();c.moveTo(px,25);c.lineTo(px,h);c.stroke();c.fillStyle='#ff8fbd';c.beginPath();c.moveTo(px-5,22);c.lineTo(px+5,22);c.lineTo(px,29);c.fill();}
 function frame(now){const dt=now-lastFrame;lastFrame=now;if(state.playing){const a=$('audio');state.time=a.src&&!a.paused&&!a.ended?a.currentTime*1000:state.time+dt*state.rate;if($('loop').checked&&state.end>state.start&&state.time>=state.end)seek(state.start);else if(state.time>=duration()){seek(duration());pause();}ensureVisible();updateTime();}drawField();drawTimeline();requestAnimationFrame(frame);}
 function timelineTime(e){const r=$('timeline').getBoundingClientRect();return clamp(state.view+(e.clientX-r.left)/r.width*state.span,0,duration());}
-$('timeline').onpointerdown=e=>{if(!state.map)return;pause();const t=timelineTime(e),r=$('timeline').getBoundingClientRect();const threshold=8/r.width*state.span;let mode=e.shiftKey?'select':Math.abs(t-state.start)<threshold?'start':Math.abs(t-state.end)<threshold?'end':'seek';drag={mode,anchor:t};$('timeline').setPointerCapture(e.pointerId);if(mode==='select'){state.start=state.end=t;updateSelection();}else if(mode==='seek')seek(t);};
-$('timeline').onpointermove=e=>{if(!drag)return;const t=timelineTime(e);if(drag.mode==='seek')seek(t);else if(drag.mode==='select'){state.start=Math.min(drag.anchor,t);state.end=Math.max(drag.anchor,t);seek(t);}else state[drag.mode]=t;updateSelection();};
-$('timeline').onpointerup=()=>{drag=null;};$('timeline').onpointercancel=()=>{drag=null;};
-$('timeline').addEventListener('wheel',e=>{e.preventDefault();if(e.shiftKey){state.view+=e.deltaY*state.span/1200;updatePan();}else{const r=$('timeline').getBoundingClientRect();zoom(e.deltaY>0?1.2:1/1.2,(e.clientX-r.left)/r.width);}},{passive:false});
+function beginTimelineDrag(e){
+    if(!state.map||![0,1,2].includes(e.button))return;
+    if(e.currentTarget===$('pan')&&e.button!==1)return;
+    e.preventDefault();pause();
+    const r=$('timeline').getBoundingClientRect(),t=timelineTime(e);
+    const threshold=8/r.width*state.span;
+    const mode=e.button===1?'pan':e.button===2||e.shiftKey?'select':Math.abs(t-state.start)<threshold?'start':Math.abs(t-state.end)<threshold?'end':'seek';
+    drag={mode,anchor:t,clientX:e.clientX,view:state.view,span:state.span,width:r.width,pointerId:e.pointerId,target:e.currentTarget};
+    e.currentTarget.setPointerCapture(e.pointerId);
+    if(mode!=='pan')seek(t);
+    if(mode==='pan')e.currentTarget.classList.add('panning');
+}
+function moveTimelineDrag(e){
+    if(!drag||drag.pointerId!==e.pointerId)return;
+    e.preventDefault();
+    if(drag.mode==='pan'){
+        state.view=drag.view-(e.clientX-drag.clientX)/drag.width*drag.span;
+        updatePan();return;
+    }
+    const t=timelineTime(e);
+    if(drag.mode==='select'){
+        if(Math.abs(e.clientX-drag.clientX)<3&&!drag.moved)return;
+        drag.moved=true;state.start=Math.min(drag.anchor,t);state.end=Math.max(drag.anchor,t);
+    }else if(drag.mode!=='seek')state[drag.mode]=t;
+    seek(t);updateSelection();
+}
+function endTimelineDrag(e){
+    if(!drag||drag.pointerId!==e.pointerId)return;
+    if(e.type==='pointerup')moveTimelineDrag(e);
+    const target=drag.target;target.classList.remove('panning');
+    if(target.hasPointerCapture(e.pointerId))target.releasePointerCapture(e.pointerId);
+    drag=null;
+}
+function wheelTimeline(e){
+    e.preventDefault();if(!state.map||e.deltaY===0)return;
+    const r=e.currentTarget.getBoundingClientRect();
+    zoom(e.deltaY>0?1.2:1/1.2,clamp((e.clientX-r.left)/r.width,0,1));
+}
+for(const id of ['timeline','pan']){
+    const element=$(id);
+    element.addEventListener('pointerdown',beginTimelineDrag);
+    element.addEventListener('pointermove',moveTimelineDrag);
+    element.addEventListener('pointerup',endTimelineDrag);
+    element.addEventListener('pointercancel',endTimelineDrag);
+    element.addEventListener('lostpointercapture',()=>{element.classList.remove('panning');drag=null;});
+    element.addEventListener('auxclick',e=>{if(e.button===1)e.preventDefault();});
+    element.addEventListener('contextmenu',e=>e.preventDefault());
+    element.addEventListener('wheel',wheelTimeline,{passive:false});
+}
 $('open').onclick=()=>$('file').click();$('file').onchange=e=>{openFile(e.target.files[0]);e.target.value='';};$('audioOpen').onclick=()=>$('audioFile').click();$('audioFile').onchange=e=>{if(!state.map)return status('请先打开谱面');const file=e.target.files[0];if(file){pause();if(audioURL)URL.revokeObjectURL(audioURL);audioURL=URL.createObjectURL(file);setAudio(audioURL);status(`已添加音频：${file.name}`);}e.target.value='';};$('difficulty').onchange=e=>switchMap(Number(e.target.value));
 $('play').onclick=()=>state.playing?pause():play();$('back').onclick=()=>seek(state.time-1000);$('forward').onclick=()=>seek(state.time+1000);$('rate').onchange=e=>{state.rate=Number(e.target.value);$('audio').playbackRate=state.rate;};$('time').onchange=e=>{const t=parseTime(e.target.value);if(Number.isFinite(t))seek(t);else{status('时间格式：分:秒.毫秒，或秒数');updateTime();}};
 for(const key of ['start','end']){$(key).onchange=e=>{const t=parseTime(e.target.value);if(Number.isFinite(t))state[key]=clamp(t,0,duration());else status('时间格式：分:秒.毫秒，或秒数');updateSelection();};$(key==='start'?'setStart':'setEnd').onclick=()=>{state[key]=state.time;updateSelection();};}
