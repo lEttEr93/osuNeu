@@ -55,6 +55,21 @@ JSON 使用 `schema: osuneu.annotations`、`version: 2`（v1 仍可导入，缺�
 
 检查：`python -m unittest discover -s tests`。更换桌面端口：`python -m osuneu.desktop --port 8767`。桌面交互测试见 `tests/desktop-ui.cjs`。
 
+### 标注 vs 预测的可视化
+
+```bash
+.venv/Scripts/python.exe -m osuneu.visualize a.json b.json target.json \
+    --target target.json --out viz.html
+```
+
+输出一个自包含 HTML（无外部依赖，双击即可看）：
+
+- **上卷轴**：人工标注区间，颜色按主标签区分，最多三行错开；
+- **下卷轴**：逐物件概率热力带（stream / jump 各一条），亮度 = 概率；
+- 两个卷轴共用时间轴：拖拽或滚动条平移，**Ctrl + 滚轮**缩放，右上角 −/+/全谱。
+
+默认对目标图做**留一验证**（只用其它图训练），加 `--train-self` 改成用本图训练，仅用于看上限。
+
 ---
 
 > **Neu** = Neural。给「谱面键型」做小体量模型的可运行骨架：
