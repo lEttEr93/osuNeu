@@ -1,6 +1,8 @@
-# osu-pattern-ml
+# osu!Neu
 
-给「谱面键型」做小体量模型的可运行骨架：**特征契约 + 0.33 MB 模型 + 训练/导出脚本 + 合成数据自检**。
+> **Neu** = Neural。给「谱面键型」做小体量模型的可运行骨架：
+> **特征契约 + 0.33 MB 模型 + 训练/导出脚本 + 合成数据自检**。
+> 仓库：https://github.com/lEttEr93/osuNeu
 
 > ⚠️ 现在仓库里的 `model.pt` 是在**合成谱面**上训练的，它的数字只证明管线通了，
 > **没有任何现实意义**。真实价值要等接上官方 user tags 和你自己标的片段。
@@ -15,19 +17,19 @@ uv venv --python 3.14 .venv
 uv pip install --python .venv/Scripts/python.exe torch onnx onnxruntime numpy
 
 # 模型规模
-.venv/Scripts/python.exe -m osu_ml.model
+.venv/Scripts/python.exe -m osuneu.model
 
 # 合成数据训练（CPU，约 1 分钟）
-.venv/Scripts/python.exe -m osu_ml.train --maps 600 --epochs 10
+.venv/Scripts/python.exe -m osuneu.train --maps 600 --epochs 10
 
 # 导出 ONNX 并验证数值一致性
-.venv/Scripts/python.exe -m osu_ml.export_onnx
+.venv/Scripts/python.exe -m osuneu.export_onnx
 
 # 用真实 .osu 跑一遍（解析 -> 特征 -> onnxruntime）
-.venv/Scripts/python.exe -m osu_ml.infer "path/to/map.osu"
+.venv/Scripts/python.exe -m osuneu.infer "path/to/map.osu"
 
 # 扫整个 Songs 目录，检查解析/特征健康度
-.venv/Scripts/python.exe -m osu_ml.validate
+.venv/Scripts/python.exe -m osuneu.validate
 ```
 
 本机实测：242 个 `.osu` 里 35 个是标准模式，解析 **0 失败、0 NaN**，
@@ -47,7 +49,7 @@ seg_weights float32 [batch, N]        attention 权重（可当"重点段落"可
 
 6 个标签：`jump, stream, tech, alt, precision, reading`（对应官方 user tags 的一级分类）。
 
-### 19 维特征（顺序即契约，见 `osu_ml/features.py`）
+### 19 维特征（顺序即契约，见 `osuneu/features.py`）
 
 | # | 特征 | 说明 |
 |---|---|---|
@@ -153,11 +155,11 @@ var outputs = session.Run(new[] { NamedOnnxValue.CreateFromTensor("tokens", inpu
 ## 目录
 
 ```
-osu_ml/parse.py      .osu 解析（无第三方依赖）
-osu_ml/features.py   19 维特征（契约在这里）
-osu_ml/synth.py      合成谱面 + 标签
-osu_ml/model.py      TinyPatternNet
-osu_ml/train.py      训练循环 + 评估
-osu_ml/export_onnx.py 导出 + 数值一致性检查
-osu_ml/diag.py       段级 / 图级 AUC 诊断
+osuneu/parse.py      .osu 解析（无第三方依赖）
+osuneu/features.py   19 维特征（契约在这里）
+osuneu/synth.py      合成谱面 + 标签
+osuneu/model.py      TinyPatternNet
+osuneu/train.py      训练循环 + 评估
+osuneu/export_onnx.py 导出 + 数值一致性检查
+osuneu/diag.py       段级 / 图级 AUC 诊断
 ```
