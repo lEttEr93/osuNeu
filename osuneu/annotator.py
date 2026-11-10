@@ -6,9 +6,14 @@ import hashlib
 import io
 import json
 import mimetypes
+import os
 import posixpath
+import random
 import re
 import threading
+import time
+import urllib.error
+import urllib.request
 import webbrowser
 import zipfile
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -17,6 +22,69 @@ from urllib.parse import unquote, urlsplit
 
 WEB = Path(__file__).with_name("web")
 MAX_UPLOAD = 200 * 1024 * 1024
+
+# Same route as osu! Roam: pick a beatmapset from the public search JSON, then
+# download the .osz from the CN mirror (with international fallbacks).
+USER_AGENT = "osu!neu annotator/0.1 (https://github.com/lEttEr93/osuNeu)"
+SEARCH_URL = "https://osu.ppy.sh/beatmapsets/search?m=0&s=ranked&page={page}"
+RANDOM_PAGES = 200   # osu search only exposes the first ~10k ranked results
+OSZ_MIRRORS = (
+    "https://dl.sayobot.cn/beatmaps/download/full/{sid}",
+    "https://txy1.sayobot.cn/beatmaps/download/full/{sid}",
+    "https://catboy.best/d/{sid}",
+    "https://beatconnect.io/b/{sid}/",
+)
+MAX_OSZ = 150 * 1024 * 1024
+
+
+def _http(url: str, method: str = "GET", timeout: int = 20):
+    request = urllib.request.Request(
+        url, method=method,
+        headers={"User-Agent": USER_AGENT, "Accept": "*/*"})
+    return urllib.request.urlopen(request, timeout=timeout)
+
+
+def random_mapset() -> dict:
+    """One ranked standard beatmapset, picked from a random search page."""
+    for _ in range(3):
+        with _http(SEARCH_URL.format(page=random.randrange(RANDOM_PAGES))) as response:
+            payload = json.loads(response.read())
+        sets = [s for s in payload.get("beatmapsets", [])
+                if any(b.get("mode") in (0, "osu") for b in s.get("beatmaps", []))]
+        if sets:
+            return random.choice(sets)
+    raise ValueError("这次没抽到标准模式谱面，再试一次")
+
+
+def cached_osz(set_id: int, cache_dir: Path) -> bytes:
+    path = cache_dir / f"{set_id}.osz"
+    if path.exists() and path.stat().st_size > 1024:
+        return path.read_bytes()
+    errors = []
+    deadline = time.monotonic() + 60
+    for template in OSZ_MIRRORS:
+        if time.monotonic() > deadline:
+            errors.append("总超时")
+            break
+        url = template.format(sid=set_id)
+        try:
+            with _http(url) as response:
+                data = bytearray()
+                while chunk := response.read(1 << 20):
+                    data.extend(chunk)
+                    if len(data) > MAX_OSZ:
+                        raise ValueError("谱包超过 150 MB")
+                    if time.monotonic() > deadline:
+                        raise TimeoutError("下载超时")
+            if len(data) <= 1024 or bytes(data[:2]) != b"PK":
+                errors.append(f"{template} -> 不是 zip")
+                continue
+            cache_dir.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(bytes(data))
+            return bytes(data)
+        except (urllib.error.URLError, TimeoutError, OSError, ValueError) as exc:
+            errors.append(f"{template} -> {exc}")
+    raise ValueError("所有镜像都失败了：" + "；".join(errors[:3]))
 
 
 def parse_preview(data: bytes, filename: str) -> dict:
@@ -166,12 +234,33 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         try:
-            if self.path != "/api/open":
-                return self.send_error(404)
+            path = urlsplit(self.path).path
             # Prevent other websites from submitting files to this local server.
             origin = self.headers.get("Origin")
             if origin and origin != "http://" + self.headers.get("Host", ""):
                 return self.send_error(403)
+            if path == "/api/random":
+                info = random_mapset()
+                maps = self.open_set(info["id"])
+                body = dict(maps=maps, set=dict(id=info["id"], artist=info.get("artist", ""),
+                                                title=info.get("title", ""),
+                                                creator=info.get("creator", ""),
+                                                status=info.get("status", "")))
+                return self.send_data(json.dumps(body, ensure_ascii=False, allow_nan=False).encode(),
+                                      "application/json; charset=utf-8")
+            if path == "/api/fetch":
+                size = int(self.headers.get("Content-Length", 0))
+                if not 0 < size <= 4096:
+                    raise ValueError("请求无效")
+                set_id = int(json.loads(self.rfile.read(size) or b"{}").get("set", 0))
+                if set_id <= 0:
+                    raise ValueError("无效的谱面集 ID")
+                maps = self.open_set(set_id)
+                return self.send_data(json.dumps(dict(maps=maps, set=dict(id=set_id)),
+                                                 ensure_ascii=False, allow_nan=False).encode(),
+                                      "application/json; charset=utf-8")
+            if path != "/api/open":
+                return self.send_error(404)
             size = int(self.headers.get("Content-Length", 0))
             if not 0 < size <= MAX_UPLOAD:
                 raise ValueError("文件大小必须在 0–200 MB 之间")
@@ -180,6 +269,13 @@ class Handler(BaseHTTPRequestHandler):
             self.send_data(json.dumps(dict(maps=maps), ensure_ascii=False, allow_nan=False).encode(), "application/json; charset=utf-8")
         except (ValueError, IndexError, zipfile.BadZipFile, RuntimeError, KeyError) as exc:
             self.send_data(json.dumps(dict(error=str(exc)), ensure_ascii=False).encode(), "application/json; charset=utf-8", 400)
+
+    def open_set(self, set_id: int):
+        cache = Path(os.environ.get("AI_CACHES", "D:/AI/caches")) / "osuneu" / "beatmaps"
+        data = cached_osz(set_id, cache)
+        maps, assets = load_upload(data, f"{set_id}.osz")
+        self.server.assets = assets
+        return maps
 
 
 def main():

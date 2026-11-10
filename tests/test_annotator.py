@@ -1,4 +1,5 @@
 import io
+import json
 import threading
 import unittest
 import zipfile
@@ -96,6 +97,29 @@ class MediaServerTests(unittest.TestCase):
         self.assertEqual(self.request('bytes=-3')[2], b'789')
         self.assertEqual(self.request('bytes=100-')[0], 416)
         self.assertEqual(self.request('bytes=0-1,3-4')[0], 416)
+
+
+class DownloadTests(unittest.TestCase):
+    def test_cached_osz_skips_network(self):
+        from pathlib import Path
+        from tempfile import TemporaryDirectory
+        from osuneu.annotator import cached_osz
+        with TemporaryDirectory() as tmp:
+            payload = b'PK' + b'0' * 2048
+            (Path(tmp) / '42.osz').write_bytes(payload)
+            self.assertEqual(cached_osz(42, Path(tmp)), payload)
+
+    def test_random_mapset_accepts_string_mode(self):
+        from unittest import mock
+        from osuneu import annotator
+        payload = {'beatmapsets': [
+            {'id': 1, 'beatmaps': [{'mode': 'taiko'}]},
+            {'id': 2, 'beatmaps': [{'mode': 'osu'}]},
+        ]}
+        response = mock.MagicMock()
+        response.__enter__.return_value.read.return_value = json.dumps(payload).encode()
+        with mock.patch.object(annotator, '_http', return_value=response):
+            self.assertEqual(annotator.random_mapset()['id'], 2)
 
 
 if __name__ == '__main__':
