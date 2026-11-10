@@ -19,6 +19,8 @@
 
 桌面持久数据使用 `OSUNEU_DATA_DIR` 或 `--data-dir` 指定；默认复用 `artifacts/osuneu/*-desktop-studio` 中最新的目录，没有时通过工作区脚本创建。可删除的磁盘缓存使用 `AI_CACHES/osuneu`，不会使用浏览器用户目录。默认桌面服务端口为 8766，窗口关闭时服务随之退出。
 
+启动器会检查编辑器是否实际载入。Qt 渲染进程崩溃或 15 秒内未就绪时，会自动重试兼容渲染方式，并记住成功配置。兼容方式只对编辑器子进程关闭 Chromium 沙箱，窗口限制访问本地编辑器资源；不改变系统或浏览器设置。启动日志保存在 `AI_ROOT/runs/osuneu/desktop-*.log`。删除 `AI_CACHES/osuneu/renderer.json` 可重新检测默认渲染方式。
+
 JSON 使用 `schema: osuneu.annotations`、`version: 1`，区间为 `startMs` / `endMs`，标签为独立的 `labels` 数组。导出同时附带区间内物件起点对应的 **0 起始** `objectIndices`，原始毫秒边界保留。未标注区间代表未知，不能直接视为负样本。标注器暂不接入模型预测。
 
 预览支持圆圈、Bezier / 圆弧 / Catmull / 直线滑条、重复滑条、转盘和 AR / CS；滑条时长考虑 SV 与红线重置。它是标注预览，不是完整游戏引擎：尚未实现 stacking、皮肤、storyboard、视频、击打音效或官方 autoplay 光标。演示为无音频的合成谱面。音乐依赖浏览器支持的音频格式。

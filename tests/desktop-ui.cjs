@@ -12,6 +12,7 @@ const output=process.env.OSUNEU_TEST_OUTPUT;
   const errors=[];page.on('pageerror',e=>errors.push(String(e)));
   await page.click('#demo');
   assert.equal(await page.locator('html').getAttribute('data-desktop'),'true');
+  await page.locator('#pan').scrollIntoViewIfNeeded();
   const box=await page.locator('#timeline').boundingBox();
   async function drag(from,to,button='right',target=box){
     await page.mouse.move(target.x+target.width*from,target.y+target.height*.4);
