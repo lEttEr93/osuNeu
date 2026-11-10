@@ -21,7 +21,24 @@
 
 启动器会检查编辑器是否实际载入。Qt 渲染进程崩溃或 15 秒内未就绪时，会自动重试兼容渲染方式，并记住成功配置。兼容方式只对编辑器子进程关闭 Chromium 沙箱，窗口限制访问本地编辑器资源；不改变系统或浏览器设置。启动日志保存在 `AI_ROOT/runs/osuneu/desktop-*.log`。删除 `AI_CACHES/osuneu/renderer.json` 可重新检测默认渲染方式。
 
-JSON 使用 `schema: osuneu.annotations`、`version: 1`，区间为 `startMs` / `endMs`，标签为独立的 `labels` 数组。导出同时附带区间内物件起点对应的 **0 起始** `objectIndices`，原始毫秒边界保留。未标注区间代表未知，不能直接视为负样本。标注器暂不接入模型预测。
+JSON 使用 `schema: osuneu.annotations`、`version: 2`（v1 仍可导入，缺的字段按默认值补齐）。
+区间仍是 `startMs` / `endMs`，导出附带区间内物件起点的 **0 起始** `objectIndices` 与 `objectCount`。
+
+**v2 新增字段**（都是为了把「结构」和「间距」拆开、并区分「检查过」与「没看过」）：
+
+| 层级 | 字段 | 取值 | 用途 |
+|---|---|---|---|
+| 顶层 | `session.annotator` / `session.mods` | 字符串 | 标注者身份与 MOD，做一致性分析时按人/按 MOD 分层 |
+| 顶层 | `app` / `createdAt` | 版本、时间 | 追溯是哪版工具产出的 |
+| `beatmap` | `cs` / `ar` / `od` / `bpm` | 数值 | 同一张图换 MOD 或改难度设置后仍能对上 |
+| 每条标注 | `spacing` | `na` / `stack` / `tight` / `spaced` / `mixed` | **间距轴**：无位移（叠）、紧凑重叠、有间距、混合 |
+| 每条标注 | `confidence` | 1–3 | 标注者对自己的确信度（与「强度」分开） |
+| 每条标注 | `checked` | 布尔 | **已完整检查**。无标签 + `checked` = 「看过，没有这些模式」，与「没看过」区分 |
+| 每条标注 | `annotator` / `mods` | 字符串 | 逐条记录，允许中途换人 |
+| 每条标注 | `createdAt` / `updatedAt` | ISO 时间 | 修订历史 |
+
+因此「无位移三连」可以同时写成 `labels: ["stream"]` + `spacing: "stack"`，
+而「检查过但没有跳/串」写 `labels: []` + `checked: true`——这两条语义完全不同，训练时不能混。
 
 预览支持圆圈、Bezier / 圆弧 / Catmull / 直线滑条、重复滑条、转盘和 AR / CS；滑条时长考虑 SV 与红线重置。它是标注预览，不是完整游戏引擎：尚未实现 stacking、皮肤、storyboard、视频、击打音效或官方 autoplay 光标。演示为无音频的合成谱面。音乐依赖浏览器支持的音频格式。
 

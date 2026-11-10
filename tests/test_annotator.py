@@ -37,6 +37,7 @@ class AnnotationParserTests(unittest.TestCase):
         self.assertEqual(slider['end'], 2500)
         self.assertEqual(slider['points'][-1], [300, 200])
         self.assertEqual(bm['settings']['ApproachRate'], 7)
+        self.assertEqual(bm['bpm'], 120)
         self.assertEqual(bm['objects'][2]['end'], 5000)
 
     def test_archive_relative_audio_and_nonstandard_filter(self):

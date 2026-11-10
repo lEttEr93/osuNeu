@@ -73,11 +73,12 @@ def parse_preview(data: bytes, filename: str) -> dict:
     for i, obj in enumerate(objects):
         number = 1 if obj["newCombo"] or i == 0 else number + 1
         obj.update(index=i, number=number)
+    bpm = 60000.0 / timing[0][1] if timing and timing[0][1] > 0 else 0.0
     return dict(id=hashlib.sha256(data).hexdigest(), filename=filename,
                 title=meta.get("TitleUnicode", "").strip() or meta.get("Title", "Untitled").strip(),
                 artist=meta.get("ArtistUnicode", "").strip() or meta.get("Artist", "").strip(),
                 version=meta.get("Version", "Unknown").strip(), creator=meta.get("Creator", "").strip(),
-                audio=general.get("AudioFilename", "").strip(), settings=settings,
+                audio=general.get("AudioFilename", "").strip(), settings=settings, bpm=bpm,
                 objects=objects, timing=timing, duration=max(o["end"] for o in objects) + 1500)
 
 
