@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>osu!neu · 谱面标注器</title><link rel="stylesheet" href="/style.css"></head>
+<body>
+<header><div class="brand">osu!<b>neu</b><span>谱面标注器</span></div><div class="actions"><button id="open" class="primary">打开谱面</button><button id="audioOpen">添加音频</button><button id="import">导入标注</button><button id="export">导出 JSON</button></div></header>
+<input hidden id="file" type="file" accept=".osu,.osz"><input hidden id="audioFile" type="file" accept="audio/*"><input hidden id="jsonFile" type="file" accept=".json">
+<main>
+<section class="workspace"><div class="mapbar"><div><span class="eyebrow">BEATMAP / STANDARD</span><h1 id="title">把一段谱面，变成可描述的模式。</h1><p id="metadata">打开 .osu 或 .osz 开始，也可以先试用演示谱面。</p></div><select id="difficulty" aria-label="选择难度"></select></div>
+<div class="preview"><canvas id="playfield" aria-label="谱面实时预览"></canvas><div id="empty"><span class="orb">◎</span><h2>观察 · 框选 · 标记</h2><p>拖入谱面，或从演示开始</p><button id="demo">打开演示谱面</button></div><span class="previewBadge">STANDARD PREVIEW</span></div>
+<div class="transport"><button id="play" class="primary" aria-label="播放或暂停">▶ 播放</button><button id="back" title="后退一秒">−1s</button><button id="forward" title="前进一秒">+1s</button><input id="time" aria-label="当前时间" value="00:00.000"><span id="total">/ 00:00.000</span><select id="rate" aria-label="播放速度"><option value="0.5">0.5×</option><option value="0.75">0.75×</option><option value="1" selected>1×</option><option value="1.5">1.5×</option></select><label><input type="checkbox" id="loop">循环选区</label></div>
+<div class="timelineToolbar"><div><span class="eyebrow">TIMELINE</span><span class="hint">拖动定位 · Shift + 拖动框选 · 滚轮缩放</span></div><div><button id="zoomOut">−</button><button id="fit">全谱</button><button id="zoomIn">+</button></div></div>
+<canvas id="timeline" aria-label="可拖动的谱面时间轴"></canvas><input id="pan" type="range" min="0" max="1000" value="0" aria-label="平移时间轴">
+<div class="status"><span id="status">所有操作均在本机进行</span><span id="saveStatus">自动保存在当前浏览器</span></div>
+</section>
+<aside><div class="asideHead"><span class="eyebrow">ANNOTATION</span><h2>区间标注</h2><p>自由时间边界，不吸附物件</p></div>
+<div class="boundaries"><label>起点 <kbd>I</kbd><div><input id="start" value="00:00.000" aria-label="区间起点"><button id="setStart">取当前</button></div></label><label>终点 <kbd>O</kbd><div><input id="end" value="00:00.000" aria-label="区间终点"><button id="setEnd">取当前</button></div></label></div>
+<div id="selectionInfo" class="hint">先选择一个时间区间</div><h3>模式标签 <span>可多选</span></h3><div id="tags"></div><div class="custom"><input id="customTag" placeholder="添加自定义标签" aria-label="自定义标签"><button id="addTag">+</button></div><label class="noteLabel">备注<textarea id="note" placeholder="记录体感、边界或不确定之处…" rows="3"></textarea></label><div class="editActions"><button id="save" class="primary">保存标注</button><button id="cancel" hidden>取消编辑</button></div>
+<div class="listHeader"><h3>已标注片段</h3><span id="count">0</span></div><div id="annotations"><p class="hint">还没有标注。选中区间后添加第一条。</p></div>
+</aside></main>
+<footer><span>osu!neu / LOCAL ANNOTATION STUDIO</span><span>空格 播放 · ← → 微调 100ms · I / O 设置边界 · Ctrl+Enter 保存</span></footer>
+<audio id="audio" preload="auto"></audio><script type="module" src="/app.js"></script></body></html>

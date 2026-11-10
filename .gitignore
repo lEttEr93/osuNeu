@@ -5,3 +5,8 @@ model.pt
 *.onnx
 setup.log
 runs/
+build/
+dist/
+node_modules/
+logs/
+*.log
