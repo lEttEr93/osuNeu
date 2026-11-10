@@ -5,7 +5,7 @@
 .session{display:grid;grid-template-columns:1fr 110px;gap:8px;margin:14px 0 4px}
 .session label,.fields label{font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:5px}
 .session input,.session select,.fields select{width:100%;font-size:12px;padding:6px}
-.fields{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0 4px}
+.fields{display:grid;grid-template-columns:1fr;gap:8px;margin:12px 0 4px}
 .checkRow{grid-column:1/-1;flex-direction:row;align-items:center;gap:8px;color:var(--muted);font-size:12px}
 .checkRow input{width:auto}
 .annotation .meta{margin-top:6px;font:11px monospace;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap}

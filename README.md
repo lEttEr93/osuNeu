@@ -25,27 +25,23 @@
 JSON 使用 `schema: osuneu.annotations`、`version: 2`（v1 仍可导入，缺的字段按默认值补齐）。
 区间仍是 `startMs` / `endMs`，导出附带区间内物件起点的 **0 起始** `objectIndices` 与 `objectCount`。
 
-**v2 新增字段**（都是为了把「结构」和「间距」拆开、并区分「检查过」与「没看过」）：
+**v2 新增字段**（只让标注者判断「是什么」，不让标注者定义几何）：
 
 | 层级 | 字段 | 取值 | 用途 |
 |---|---|---|---|
 | 顶层 | `session.annotator` / `session.mods` | 字符串 | 标注者身份与 MOD，做一致性分析时按人/按 MOD 分层 |
 | 顶层 | `app` / `createdAt` | 版本、时间 | 追溯是哪版工具产出的 |
 | `beatmap` | `cs` / `ar` / `od` / `bpm` | 数值 | 同一张图换 MOD 或改难度设置后仍能对上 |
-| 每条标注 | `spacing` | `na` / `stack` / `tight` / `spaced` / `mixed` | **间距轴**：无位移（叠）、紧凑重叠、有间距、混合 |
 | 每条标注 | `confidence` | 1–3 | 标注者对自己的确信度（与「强度」分开） |
 | 每条标注 | `checked` | 布尔 | **已完整检查**。无标签 + `checked` = 「看过，没有这些模式」，与「没看过」区分 |
 | 每条标注 | `annotator` / `mods` | 字符串 | 逐条记录，允许中途换人 |
 | 每条标注 | `createdAt` / `updatedAt` | ISO 时间 | 修订历史 |
 
-因此「无位移三连」可以同时写成 `labels: ["stream"]` + `spacing: "stack"`，
-而「检查过但没有跳/串」写 `labels: []` + `checked: true`——这两条语义完全不同，训练时不能混。
-
-导出时还会自动补三个**派生字段**（不用手工填）：
+**间距不标注。** 它由几何直接决定，人再把它切成 `stack/tight/spaced` 只是给模型加一层有损先验，
+所以导出时给原始统计量，让模型自己决定怎么用：
 
 | 字段 | 含义 |
 |---|---|
-| `spacingAuto` | 由区间内物件的实际间距算出：`stack`（几乎无位移）/ `tight`（重叠）/ `spaced`（不重叠）。与手填的 `spacing` 并存，手填优先 |
 | `stats.objectCount` / `medianDtMs` / `medianDistPx` | 区间内的物件数、相邻时间差中位数、位移中位数 |
 | `stats.beatMs` / `snap` | 区间起点的拍长与 `medianDt / beat`（1/4 = 0.25，1/8 = 0.125） |
 
@@ -54,7 +50,7 @@ JSON 使用 `schema: osuneu.annotations`、`version: 2`（v1 仍可导入，缺�
 
 预览支持圆圈、Bezier / 圆弧 / Catmull / 直线滑条、重复滑条、转盘和 AR / CS；滑条时长考虑 SV 与红线重置。它是标注预览，不是完整游戏引擎：尚未实现 stacking、皮肤、storyboard、视频、击打音效或官方 autoplay 光标。演示为无音频的合成谱面。音乐依赖浏览器支持的音频格式。
 
-下拉框（难度 / 播放速度 / MOD / 间距 / 确信度）是页面内的自定义列表，不是系统 `<select>` 弹窗。
+下拉框（难度 / 播放速度 / MOD / 确信度）是页面内的自定义列表，不是系统 `<select>` 弹窗。
 原因：Qt 的原生下拉弹窗在 150% 缩放下会比内容宽出一截、留一条白色空带（渲染缺陷），自绘列表可以绕开它，顺便统一深色样式。原生的 `<select>` 仍留在 DOM 里，只是隐藏，`.value` 与 `change` 事件契约不变。
 
 检查：`python -m unittest discover -s tests`。更换桌面端口：`python -m osuneu.desktop --port 8767`。桌面交互测试见 `tests/desktop-ui.cjs`。
