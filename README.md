@@ -42,6 +42,9 @@ JSON 使用 `schema: osuneu.annotations`、`version: 2`（v1 仍可导入，缺�
 
 预览支持圆圈、Bezier / 圆弧 / Catmull / 直线滑条、重复滑条、转盘和 AR / CS；滑条时长考虑 SV 与红线重置。它是标注预览，不是完整游戏引擎：尚未实现 stacking、皮肤、storyboard、视频、击打音效或官方 autoplay 光标。演示为无音频的合成谱面。音乐依赖浏览器支持的音频格式。
 
+下拉框（难度 / 播放速度 / MOD / 间距 / 确信度）是页面内的自定义列表，不是系统 `<select>` 弹窗。
+原因：Qt 的原生下拉弹窗在 150% 缩放下会比内容宽出一截、留一条白色空带（渲染缺陷），自绘列表可以绕开它，顺便统一深色样式。原生的 `<select>` 仍留在 DOM 里，只是隐藏，`.value` 与 `change` 事件契约不变。
+
 检查：`python -m unittest discover -s tests`。更换桌面端口：`python -m osuneu.desktop --port 8767`。桌面交互测试见 `tests/desktop-ui.cjs`。
 
 ---

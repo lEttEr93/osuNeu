@@ -11,3 +11,15 @@
 .annotation .meta{margin-top:6px;font:11px monospace;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap}
 .annotation .badge{border:1px solid var(--line);border-radius:4px;padding:1px 5px}
 .annotation .badge.checked{color:var(--accent);border-color:#78964f}
+
+.dd{position:relative;min-width:0}
+.dd-native{position:absolute!important;width:1px;height:1px;left:0;top:0;opacity:0;pointer-events:none}
+.dd-button{width:100%;text-align:left;padding:8px 10px;display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dd-button::after{content:'▾';color:var(--muted);font-size:10px;flex:none}
+.dd-list{position:absolute;z-index:60;left:0;right:0;top:calc(100% + 4px);background:#11141c;border:1px solid var(--line);border-radius:8px;padding:4px;max-height:260px;overflow:auto;box-shadow:0 12px 32px #000a}
+.dd-option{display:block;width:100%;text-align:left;background:transparent;border:0;padding:7px 9px;border-radius:5px;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dd-option:hover,.dd-option.active{background:#242c3a;color:var(--accent)}
+.mapbar .dd{width:230px;max-width:230px}
+.transport .dd{margin-left:auto;width:92px}
+.fields label.checkRow{flex-direction:row;align-items:center;gap:8px;grid-column:1/-1;color:var(--muted);font-size:12px}
+.fields label.checkRow input{width:auto}
